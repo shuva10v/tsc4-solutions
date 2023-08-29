@@ -1,0 +1,57 @@
+{-
+  TASK 2 - Matrix multiplier
+  Write the method that multiplies one matrix by another.
+  The 1st and 2nd parameter of the function will contain
+  a matrix implemented using tuples (eg: [[1,2], [3,4]]).
+  Matrices can be of different sizes, ranging from 4x4
+  up to 32x32.
+  Matrix can be rectangular where matrixA must to be of size n*m & matrixB of size m*p.
+  After calculating the result matrix, the function should return final result (as tuple).
+-}
+
+() recv_internal() {
+}
+
+
+;; GasValue: 13495450
+;; Points: 5.980447592967052
+
+
+(int) tlen (tuple t) asm "TLEN";
+
+forall X -> tuple cast_to_tuple (X x) asm "NOP";
+
+(tuple) m_row(tuple matrix, int i) inline asm "INDEXVAR";
+
+(int) value(tuple matrix, int i, int j) inline asm(j matrix i) "INDEXVAR" "SWAP" "INDEXVAR";
+
+
+;; testable
+(tuple) matrix_multiplier(tuple matrixA, tuple matrixB) method_id {
+  int n = tlen(matrixA);
+  int m = tlen(matrixB);
+  int p = tlen(m_row(matrixB, 0));
+  int i = 0;
+
+  tuple out = empty_tuple();
+  repeat(n) {
+    tuple row = empty_tuple();
+    int j = 0;
+    ;; it is important to save row here to avoid multiple INDEXVAR at the next loop
+    tuple matrix_row = m_row(matrixA, i);
+    repeat(p) {
+      int sum = 0;
+      int k = 0;
+      repeat(m) {
+        sum = sum + matrix_row.at(k)  * value(matrixB, k, j);
+        k = k + 1;
+      }
+      row~tpush(sum);
+      j = j + 1;
+    }
+    out~tpush(row);
+    i = i + 1;
+  }
+  return out;
+}
+

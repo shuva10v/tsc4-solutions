@@ -1,0 +1,93 @@
+{-
+  TASK 5 - Fibonacci sequence
+  Implement a function that generates the Fibonacci
+  sequence from N to N+K terms (0<=N<=370; 0<=N+K<=370; 0<=K<=255).
+  The first two terms of the Fibonacci sequence are F_0 = 0 and F_1 = 1,
+  and the rest are defined as F_n = F_(n-1) + F_(n-2).
+  The resulting Fibonacci sequence should be stored in a tuple.
+  For example, a request with N = 1 and K = 3 should return a tuple [1, 1, 2],
+  and a request with N = 201 and K = 4 should return a tuple
+  [453973694165307953197296969697410619233826,
+  734544867157818093234908902110449296423351,
+  1188518561323126046432205871807859915657177,
+  1923063428480944139667114773918309212080528]
+-}
+
+() recv_internal() {
+}
+;; GasValue: 280486
+;; Points: 5.871321267593985
+
+;; tuple solve(int prev, int current, int k) asm """
+;; DUP
+;; REPEAT <{
+;;   DUP
+;; }>
+;; DUP
+;; TUPLEVAR
+;; """;
+;; prev current k
+;; prev current             ;; start loop
+;; current prev current     ;; before add
+;; current (prev+current)   ;; after add add
+
+;; start: prev current k
+;; DUP: prev current k k
+;; 1 SETGLOB: prev current k
+;; QDEC: prev current k-1
+;; REPEAT: prev current
+;; DUP: prev current current
+;; DUP: prev current current current
+;; s1 s3 XCHG: current current prev current
+;; ADD: current current (prev+current)
+;; ...
+;; current (prev+current) (prev+current) (prev+current+current)
+tuple solve(int prev, int current, int k) inline asm """
+QDEC
+<{
+  s0 s0 PUSH2
+  s1 s3 XCHG
+  ADD
+}> PUSHCONT
+REPEAT
+s1 POP
+DEPTH
+TUPLEVAR
+""";
+
+;; prev current
+;; prev current current
+;; current current prev
+;; current current + prev
+(int, int) update_value(int prev, int current, int cnt) inline asm """
+<{
+  DUP
+  s1 s2 XCHG
+  ADD
+}> PUSHCONT
+REPEAT
+""";
+
+;; testable
+(tuple) fibonacci_sequence (int n, int k) method_id {
+  if ( k == 0) {
+    return empty_tuple();
+  }
+  
+  int index = 0;
+  int current = 0;
+  int prev = 1;
+   
+
+  ;; in contest version I also added binary search for getting N and N-1 Fib numbers without actual iterating
+  
+  ;; while(index < n) {
+  ;;       (prev, current) = (current, current + prev);
+  ;;       index += 1;
+  ;; };
+  (prev, current) = update_value(prev, current, n - index);
+
+  return solve(prev, current, k);
+
+}
+

@@ -1,0 +1,244 @@
+{-
+  TASK 1 - Find branch of the cell tree
+  Write the method that will find a branch of the tree by comparing its
+  hash with the hash received in the first parameter. When the algorithm finds
+  the subtree (branch) whose hash equals the received hash, the root cell of
+  this branch should be returned. Return empty cell if the branch is not found.
+-}
+
+() recv_internal() {
+}
+
+;; GasValue: 1232360
+;; Points: 5.488395362775238
+
+
+forall X -> int is_null (X x) asm "ISNULL";
+forall X -> (tuple, ()) push_back (tuple tail, X head) asm "CONS";
+forall X -> (tuple, (X)) pop_back (tuple t) asm "UNCONS";
+cell empty_cell() asm "c4 PUSH"; ;; some trick to create empty cell with gas-efficient way
+
+;; testable
+(cell) find_branch_by_hash(int hash, cell tree) method_id {
+  if (tree.cell_hash() == hash) {
+    return tree;
+  }
+  tuple stack = null();
+
+  ;; true iteration is not the most gas optimial, it is better to have a ladder. Yes, it looks weird...
+  ;; And yes, code size and compilation time here is not optimal)
+  slice s0 = tree.begin_parse();
+  repeat (s0.slice_refs()) {
+    cell child1 = s0~load_ref();
+    if (child1.cell_hash() == hash) {
+      return child1;
+    }
+    slice s1 = child1.begin_parse();
+    repeat (s1.slice_refs()) {
+      cell child2 = s1~load_ref();
+      if (child2.cell_hash() == hash) {
+        return child2;
+      }
+      slice s2 = child2.begin_parse();
+      repeat (s2.slice_refs()) {
+        cell child3 = s2~load_ref();
+        if (child3.cell_hash() == hash) {
+          return child3;
+        }
+        slice s3 = child3.begin_parse();
+        repeat (s3.slice_refs()) {
+          cell child4 = s3~load_ref();
+          if (child4.cell_hash() == hash) {
+            return child4;
+          }
+          slice s4 = child4.begin_parse();
+          repeat (s4.slice_refs()) {
+            cell child5 = s4~load_ref();
+            if (child5.cell_hash() == hash) {
+              return child5;
+            }
+            slice s5 = child5.begin_parse();
+            repeat (s5.slice_refs()) {
+              cell child6 = s5~load_ref();
+              if (child6.cell_hash() == hash) {
+                return child6;
+              }
+              slice s6 = child6.begin_parse();
+              repeat (s6.slice_refs()) {
+                cell child7 = s6~load_ref();
+                if (child7.cell_hash() == hash) {
+                  return child7;
+                }
+                slice s7 = child7.begin_parse();
+                repeat (s7.slice_refs()) {
+                  cell child8 = s7~load_ref();
+                  if (child8.cell_hash() == hash) {
+                    return child8;
+                  }
+                  slice s8 = child8.begin_parse();
+                  repeat (s8.slice_refs()) {
+                    cell child9 = s8~load_ref();
+                    if (child9.cell_hash() == hash) {
+                      return child9;
+                    }
+                    slice s9 = child9.begin_parse();
+                    repeat (s9.slice_refs()) {
+                      cell child10 = s9~load_ref();
+                      if (child10.cell_hash() == hash) {
+                        return child10;
+                      }
+                      slice s10 = child10.begin_parse();
+                      repeat (s10.slice_refs()) {
+                        cell child11 = s10~load_ref();
+                        if (child11.cell_hash() == hash) {
+                          return child11;
+                        }
+                        slice s11 = child11.begin_parse();
+                        repeat (s11.slice_refs()) {
+                          cell child12 = s11~load_ref();
+                          if (child12.cell_hash() == hash) {
+                            return child12;
+                          }
+                          slice s12 = child12.begin_parse();
+                          repeat (s12.slice_refs()) {
+                            cell child13 = s12~load_ref();
+                            if (child13.cell_hash() == hash) {
+                              return child13;
+                            }
+                            slice s13 = child13.begin_parse();
+                            repeat (s13.slice_refs()) {
+                              cell child14 = s13~load_ref();
+                              if (child14.cell_hash() == hash) {
+                                return child14;
+                              }
+                              slice s14 = child14.begin_parse();
+                              repeat (s14.slice_refs()) {
+                                cell child15 = s14~load_ref();
+                                if (child15.cell_hash() == hash) {
+                                  return child15;
+                                }
+                                stack~push_back(child15);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  ;; first ladder goes without actual stack usage. It is still weird but it allows to save gas in case root cell has depth < 15
+  
+  
+  while (~ stack.is_null()) {
+  
+    cell child0 = stack~pop_back();
+    slice s0 = child0.begin_parse();
+    repeat (s0.slice_refs()) {
+      cell child1 = s0~load_ref();
+      if (child1.cell_hash() == hash) {
+        return child1;
+      }
+      slice s1 = child1.begin_parse();
+      repeat (s1.slice_refs()) {
+        cell child2 = s1~load_ref();
+        if (child2.cell_hash() == hash) {
+          return child2;
+        }
+        slice s2 = child2.begin_parse();
+        repeat (s2.slice_refs()) {
+          cell child3 = s2~load_ref();
+          if (child3.cell_hash() == hash) {
+            return child3;
+          }
+          slice s3 = child3.begin_parse();
+          repeat (s3.slice_refs()) {
+            cell child4 = s3~load_ref();
+            if (child4.cell_hash() == hash) {
+              return child4;
+            }
+            slice s4 = child4.begin_parse();
+            repeat (s4.slice_refs()) {
+              cell child5 = s4~load_ref();
+              if (child5.cell_hash() == hash) {
+                return child5;
+              }
+              slice s5 = child5.begin_parse();
+              repeat (s5.slice_refs()) {
+                cell child6 = s5~load_ref();
+                if (child6.cell_hash() == hash) {
+                  return child6;
+                }
+                slice s6 = child6.begin_parse();
+                repeat (s6.slice_refs()) {
+                  cell child7 = s6~load_ref();
+                  if (child7.cell_hash() == hash) {
+                    return child7;
+                  }
+                  slice s7 = child7.begin_parse();
+                  repeat (s7.slice_refs()) {
+                    cell child8 = s7~load_ref();
+                    if (child8.cell_hash() == hash) {
+                      return child8;
+                    }
+                    slice s8 = child8.begin_parse();
+                    repeat (s8.slice_refs()) {
+                      cell child9 = s8~load_ref();
+                      if (child9.cell_hash() == hash) {
+                        return child9;
+                      }
+                      slice s9 = child9.begin_parse();
+                      repeat (s9.slice_refs()) {
+                        cell child10 = s9~load_ref();
+                        if (child10.cell_hash() == hash) {
+                          return child10;
+                        }
+                        slice s10 = child10.begin_parse();
+                        repeat (s10.slice_refs()) {
+                          cell child11 = s10~load_ref();
+                          if (child11.cell_hash() == hash) {
+                            return child11;
+                          }
+                          slice s11 = child11.begin_parse();
+                          repeat (s11.slice_refs()) {
+                            cell child12 = s11~load_ref();
+                            if (child12.cell_hash() == hash) {
+                              return child12;
+                            }
+                            slice s12 = child12.begin_parse();
+                            repeat (s12.slice_refs()) {
+                              cell child13 = s12~load_ref();
+                              if (child13.cell_hash() == hash) {
+                                return child13;
+                              }
+                              slice s13 = child13.begin_parse();
+                              repeat (s13.slice_refs()) {
+                                cell child14 = s13~load_ref();
+                                if (child14.cell_hash() == hash) {
+                                  return child14;
+                                }
+                                stack~push_back(child14);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return empty_cell();
+}

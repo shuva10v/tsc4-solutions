@@ -1,0 +1,159 @@
+{- 
+  TASK 3 - Find and replace binary substring
+  Binary string is represented as a cell linked list: string splitted to chunks,
+  first chunk stored to the root cell, next one to the cell in ref and so on;
+  each cell can have only one ref. 
+  Write the method that find and replaces one flags in the binary string
+  with another value. Flags and values can be can be of any length, but
+  strictly up to 128 bits. The method must replace every flag it finds.
+  Flag and the value to be replaced is guaranteed to be greater than 0.
+  Lets give a simple example. We have the target flag 101110101 and the value
+  to be written 111111111 as inputs, and a linked list of cells, in which the bit
+  value of the first cell ends with ...10100001011, and in the ref we have cell that
+  starts with 10101000111111...
+  The output should be a linked list where the first
+  cell ends with ...10100001111, and the second cell starts with 11111000111111...
+
+-}
+
+() recv_internal() {
+}
+
+(int) get_bits(int v) inline asm "UBITSIZE";
+
+(builder, slice, int) store_slice_safe(builder b, slice s) asm "STSLICERQ" "NULLSWAPIFNOT";
+(builder, slice, int) store_uint1_safe(builder b, int s) asm "PUSHINT 1" "STUXQ" "NULLSWAPIFNOT";
+
+
+;; GasValue: 27104004
+;; Points: 5.636026234423962
+
+;; testable
+(cell) find_and_replace(int flag, int value, cell linked_list) method_id {
+  ;; prepare slices from flag and value
+  int bits  = get_bits(flag);
+  int value_bits  = get_bits(value);
+  slice pattern = begin_cell().store_uint(flag, bits).end_cell().begin_parse();
+  slice value_s = begin_cell().store_uint(value, value_bits).end_cell().begin_parse();
+
+  return find_and_replace_rec(begin_cell(), pattern, value_s, linked_list.begin_parse()).end_cell();
+}
+
+;; using prefix compare allows you to make it faster
+int fast_compare(slice pattern, slice s) asm "SDPFX";
+
+int lead_zeroes(slice s) asm "SDCNTLEAD0";
+
+
+
+(builder) find_and_replace_rec(builder out, slice pattern, slice value, slice cs) {
+  int bits = pattern.slice_bits();
+  int remaining = cs.slice_bits() - bits;
+  while(remaining >= 0) {
+    ;; simple case - have enough bits
+    if (fast_compare(pattern, cs)) {
+      cs~skip_bits(bits);
+
+      (out, _, int failure) = out.store_slice_safe(value);
+      if (failure) {
+        builder next_b = begin_cell().store_slice(value);
+        
+        return out
+          .store_ref(find_and_replace_rec(next_b, pattern, value, cs).end_cell());
+      }
+      remaining -= bits;
+    } else {
+      slice next_bit = cs~load_bits(1);
+      (out, _, int failure) = out.store_slice_safe(next_bit);
+      if (failure) {
+        builder next_b = begin_cell().store_slice(next_bit);
+          
+        return out
+          .store_ref(find_and_replace_rec(next_b, pattern, value, cs).end_cell());
+      }
+      remaining -= 1;
+    }
+    
+    ;; lead zeroes could be omited - it is not possible to have flag here
+
+    int lz = lead_zeroes(cs);
+    if (lz > 0) {
+      slice zeroes = cs~load_bits(lz);
+      (out, _, int failure) = out.store_slice_safe(zeroes);
+      if (failure) {
+        builder next_b = begin_cell().store_slice(zeroes);
+        
+        return out
+          .store_ref(find_and_replace_rec(next_b, pattern, value, cs).end_cell());
+      }
+      remaining -= lz;
+    }
+    
+  };
+
+  ;; has next cell
+  if (cs.slice_refs()) {
+    while(~ cs.slice_data_empty?()) {
+      ;; less then bits avaialable, but > 0
+      ;; has next cell
+      if (fast_compare(cs, pattern)) { ;; prefix matches
+        ;; if (equal_slice_bits(cs, pattern.first_bits(cs.slice_bits()))) { ;; prefix matches
+        slice next_cs = cs.preload_ref().begin_parse();
+        if (next_cs.slice_bits() < bits - cs.slice_bits()) { ;; no bits
+          (out, _, int failure) = out.store_slice_safe(cs);
+          if (failure) {
+            builder next_b = begin_cell().store_slice(cs);
+            
+            return out.store_ref(begin_cell().store_slice(cs).end_cell());
+          }
+          return out;
+        }
+        if (fast_compare(pattern.skip_bits(cs.slice_bits()), next_cs)) {
+          ;; if (equal_slice_bits(next_cs.first_bits(bits - cs.slice_bits()), pattern.skip_bits(cs.slice_bits()))) {
+          builder next_b = begin_cell().store_slice(value);
+        
+          return out.store_ref(find_and_replace_rec(next_b, pattern, value, next_cs.skip_bits(bits - cs.slice_bits())).end_cell());
+        } else {
+          slice next_bit = cs~load_bits(1);
+          (out, _, int failure) = out.store_slice_safe(next_bit);
+          if (failure) {
+            builder next_b = begin_cell().store_slice(next_bit);
+          
+            return out.store_ref(find_and_replace_rec(next_b, pattern, value, cs).end_cell());
+          }
+        }
+      } else {
+        slice next_bit = cs~load_bits(1);
+        (out, _, int failure) = out.store_slice_safe(next_bit);
+        if (failure) {
+          builder next_b = begin_cell().store_slice(next_bit);
+          
+          return out.store_ref(find_and_replace_rec(next_b, pattern, value, cs).end_cell());
+        }
+      }
+
+      int lz = lead_zeroes(cs);
+      if (lz > 0) {
+        slice zeroes = cs~load_bits(lz);
+        (out, _, int failure) = out.store_slice_safe(zeroes);
+        if (failure) {
+          builder next_b = begin_cell().store_slice(zeroes);
+          
+          return out
+            .store_ref(find_and_replace_rec(next_b, pattern, value, cs).end_cell());
+        }
+      }
+    }
+
+    return out
+        .store_ref(find_and_replace_rec(begin_cell(), pattern, value, cs.preload_ref().begin_parse()).end_cell()); 
+  } else {
+    (out, _, int failure) = out.store_slice_safe(cs);
+    if (failure) {
+      builder next_b = begin_cell().store_slice(cs);
+          
+      return out.store_ref(begin_cell().store_slice(cs).end_cell());
+    }
+    return out;
+  }
+}

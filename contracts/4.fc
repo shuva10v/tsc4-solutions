@@ -1,0 +1,175 @@
+{-
+  TASK 4 - Caesar Cipher
+  Implement a Caesar cipher encryption and decryption functions.
+  The input is a string (https://docs.ton.org/develop/smart-contracts/guidelines/internal-messages#simple-message-with-comment)
+  where the text is encrypted in a cell (after 32bit 00000000 prefix flag), the algorithm rotates the characters and the last ASCII
+  character should go to the beginning. Return new text encoded in cell.
+-}
+
+() recv_internal() {
+}
+
+;; GasValue: 92426268
+;; Points: 5.885529698802686
+
+
+
+int at_safe(tuple mapping, int key) asm "INDEXVARQ";
+
+(int) tlen (tuple t) asm "TLEN";
+
+(int) negate (int t) asm "NEGATE";
+
+
+;; (slice, int) ~load_uint8(slice s) asm "LDU_8";
+;; out mapping cs 8
+;; out mapping char cs
+;; cs mapping char out
+;; cs out mapping char
+;; cs out new_char
+(slice, builder) fast_rotate(builder out, tuple mapping, slice cs) inline asm """
+8 PUSHINT
+LDUX
+s0 s3 XCHG
+ROTREV
+INDEXVAR
+SWAP
+8 PUSHINT
+STUX
+""";
+
+
+(builder) caesar_cipher_encrypt_slice_mapping(tuple mapping, slice cs) inline_ref {
+  builder out = begin_cell();
+  repeat (cs.slice_bits() >> 3) {
+    ;; using asm-optimized version doesn't work
+    ;; (cs, out) = fast_rotate(out, mapping, cs);
+    int char = cs~load_uint(8);
+    out~store_uint(mapping.at(char), 8);
+  } 
+  if (cs.slice_refs()) {
+    slice next = cs~load_ref().begin_parse();
+    builder next_c = caesar_cipher_encrypt_slice_mapping(mapping, next);
+    return out.store_ref(next_c.end_cell());
+  }
+  return out;
+}
+
+;; build table of replacements at start
+tuple build_table(int shift) inline asm """
+1 SETGLOB
+0 PUSHINT
+64 PUSHINT
+<{
+  DUP
+  QINC
+}> PUSHCONT
+REPEAT
+
+1 GETGLOB
+26 PUSHINT
+<{
+  DUP
+  26 PUSHINT
+  MOD
+  65 PUSHINT
+  ADD
+  SWAP
+  QINC
+}> PUSHCONT
+REPEAT
+s0 POP
+
+91 PUSHINT
+5 PUSHINT
+<{
+  DUP
+  QINC
+}> PUSHCONT
+REPEAT
+
+1 GETGLOB
+26 PUSHINT
+<{
+  DUP
+  26 PUSHINT
+  MOD
+  97 PUSHINT
+  ADD
+  SWAP
+  QINC
+}> PUSHCONT
+REPEAT
+s0 POP
+
+123 PUSHINT
+131 PUSHINT
+<{
+  DUP
+  QINC
+}> PUSHCONT
+REPEAT
+
+255 PUSHINT
+TUPLEVAR
+""";
+
+
+;; testable
+(cell) caesar_cipher_encrypt(int shift, cell text) method_id {
+  shift = shift % 26;
+  if (shift == 0) {
+    return text;
+  }
+  slice cs = text.begin_parse();
+  builder out = begin_cell().store_slice(cs~load_bits(32));
+  tuple mapping = build_table(shift);
+  ;; FunC version is not optimal - using tpush to populate large tuples is not efficient
+  ;; tuple mapping = empty_tuple();
+  ;; int index = 0;
+  ;; ;; 0 - 64
+  ;; repeat(65) {
+  ;;   mapping~tpush(index);
+  ;;   index += 1;
+  ;; }
+  ;; ;; 65 - 90
+  ;; index = 0;
+  ;; repeat(26) {
+  ;;   mapping~tpush(65 + (index + shift) % 26);
+  ;;   index += 1;
+  ;; }
+  ;; ;; 91 - 96
+  ;; index = 91;
+  ;; repeat(6) {
+  ;;   mapping~tpush(index);
+  ;;   index += 1;
+  ;; }
+  ;; ;; 97 - 122
+  ;; index = 0;
+  ;; repeat(26) {
+  ;;   mapping~tpush(97 + (index + shift) % 26);
+  ;;   index += 1;
+  ;; }
+
+  ;; index = 123;
+  ;; repeat(132) {
+  ;;   mapping~tpush(index);
+  ;;   index += 1;
+  ;; }
+  ;; return build_table(shift);
+  ;; throw(tlen(mapping));
+  return out.store_builder(caesar_cipher_encrypt_slice_mapping(mapping, cs)).end_cell();
+}
+
+;; testable
+(cell) caesar_cipher_decrypt(int shift, cell text) method_id {
+  shift = negate(shift);
+  shift = shift % 26;
+  if (shift == 0) {
+    return text;
+  }
+  slice cs = text.begin_parse();
+  builder out = begin_cell().store_slice(cs~load_bits(32));
+  tuple mapping = build_table(shift);
+  return out.store_builder(caesar_cipher_encrypt_slice_mapping(mapping, cs)).end_cell();
+}
